@@ -1,0 +1,273 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <title>Samuel Thompson CV</title>
+    <link href="https://fonts.googleapis.com/css?family=Inconsolata"
+          rel="stylesheet" type="text/css" />
+    <style type="text/css">
+    	::selection {
+		  background: #FF5E99;
+		}
+		html, body {
+		  width: 100%;
+		  height: 100%;
+		  margin: 0;
+		}
+		body {
+		  font-size: 11pt;
+		  font-family: Inconsolata, monospace;
+		  color: white;
+		  background-color: black;
+		}
+		#container {
+		  padding: .1em 1.5em 1em 1em;
+		}
+		#container output {
+		  clear: both;
+		  width: 100%;
+		}
+		#container output h3 {
+		  margin: 0;
+		}
+		#container output pre {
+		  margin: 0;
+		  font-family: Inconsolata, monospace;
+		  white-space: pre-wrap
+		  max-width: 75%;
+		}
+		.input-line {
+		  display: -webkit-box;
+		  -webkit-box-orient: horizontal;
+		  -webkit-box-align: stretch;
+		  display: -moz-box;
+		  -moz-box-orient: horizontal;
+		  -moz-box-align: stretch;
+		  display: box;
+		  box-orient: horizontal;
+		  box-align: stretch;
+		  clear: both;
+		}
+		.input-line > div:nth-child(2) {
+		  -webkit-box-flex: 1;
+		  -moz-box-flex: 1;
+		  box-flex: 1;
+		}
+		.prompt {
+		  white-space: nowrap;
+		  color: #96b38a;
+		  margin-right: 7px;
+		  display: -webkit-box;
+		  -webkit-box-pack: center;
+		  -webkit-box-orient: vertical;
+		  display: -moz-box;
+		  -moz-box-pack: center;
+		  -moz-box-orient: vertical;
+		  display: box;
+		  box-pack: center;
+		  box-orient: vertical;
+		  -webkit-user-select: none;
+		  -moz-user-select: none;
+		  user-select: none;
+		}
+		.cmdline {
+		  outline: none;
+		  background-color: transparent;
+		  margin: 0;
+		  width: 100%;
+		  font: inherit;
+		  border: none;
+		  color: inherit;
+		}
+		.ls-files {
+		  height: 45px;
+		  -webkit-column-width: 100px;
+		  -moz-column-width: 100px;
+		  -o-column-width: 100px;
+		  column-width: 100px;
+		}
+    </style>
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript">
+    	$(function() {
+  
+		    $('.prompt').html('[user@samuelthompson] # ');
+
+		  // Initialize a new terminal object
+		  var term = new Terminal('#input-line .cmdline', '#container output');
+		  term.init();
+		  
+		});
+
+		var util = util || {};
+		util.toArray = function(list) {
+		  return Array.prototype.slice.call(list || [], 0);
+		};
+
+		var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
+		  window.URL = window.URL || window.webkitURL;
+		  window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+
+		  var cmdLine_ = document.querySelector(cmdLineContainer);
+		  var output_ = document.querySelector(outputContainer);
+
+		  const CMDS_ = [
+		    'clear', 'curl', 'help'
+		  ];
+
+		  const URLS_ = [
+		  	'http://localhost:8000/experience',
+		  	'http://localhost:8000/skills',
+		  	'http://localhost:8000/contact'
+		  ];
+		  
+		  var fs_ = null;
+		  var cwd_ = null;
+		  var history_ = [];
+		  var histpos_ = 0;
+		  var histtemp_ = 0;
+
+		  window.addEventListener('click', function(e) {
+		    cmdLine_.focus();
+		  }, false);
+
+		  cmdLine_.addEventListener('click', inputTextClick_, false);
+		  cmdLine_.addEventListener('keydown', historyHandler_, false);
+		  cmdLine_.addEventListener('keydown', processNewCommand_, false);
+
+		  //
+		  function inputTextClick_(e) {
+		    this.value = this.value;
+		  }
+
+		  //
+		  function historyHandler_(e) {
+		    if (history_.length) {
+		      if (e.keyCode == 38 || e.keyCode == 40) {
+		        if (history_[histpos_]) {
+		          history_[histpos_] = this.value;
+		        } else {
+		          histtemp_ = this.value;
+		        }
+		      }
+
+		      if (e.keyCode == 38) { // up
+		        histpos_--;
+		        if (histpos_ < 0) {
+		          histpos_ = 0;
+		        }
+		      } else if (e.keyCode == 40) { // down
+		        histpos_++;
+		        if (histpos_ > history_.length) {
+		          histpos_ = history_.length;
+		        }
+		      }
+
+		      if (e.keyCode == 38 || e.keyCode == 40) {
+		        this.value = history_[histpos_] ? history_[histpos_] : histtemp_;
+		        this.value = this.value; // Sets cursor to end of input.
+		      }
+		    }
+		  }
+
+		  //
+		  function processNewCommand_(e) {
+
+		    if (e.keyCode == 9) { // tab
+		      e.preventDefault();
+		      // Implement tab suggest.
+		    } else if (e.keyCode == 13) { // enter
+		      // Save shell history.
+		      if (this.value) {
+		        history_[history_.length] = this.value;
+		        histpos_ = history_.length;
+		      }
+
+		      // Duplicate current input and append to output section.
+		      var line = this.parentNode.parentNode.cloneNode(true);
+		      line.removeAttribute('id')
+		      line.classList.add('line');
+		      var input = line.querySelector('input.cmdline');
+		      input.autofocus = false;
+		      input.readOnly = true;
+		      output_.appendChild(line);
+
+		      if (this.value && this.value.trim()) {
+		        var args = this.value.split(' ').filter(function(val, i) {
+		          return val;
+		        });
+		        var cmd = args[0].toLowerCase();
+		        args = args.splice(1); // Remove cmd from arg list.
+		      }
+
+		      switch (cmd) {
+		        case 'clear':
+		          output_.innerHTML = '';
+		          this.value = '';
+		          return;
+		        case 'help':
+		          output('<div class="ls-files">' + CMDS_.join('<br>') + '</div>');
+		          output('Available API endpoints:');
+		          URLS_.map((item) => {
+		          	output(item);
+		          });
+		          break;
+		        case 'curl':
+		          var url = args.join(' ');
+		          if(URLS_.includes(url)) {
+		          	$.ajax({
+				  		url: url
+				  	})
+				  	.done((res) => {
+				  		console.log(JSON.stringify(res, undefined, 2));
+				  		output('<pre>' + JSON.stringify(JSON.parse(res),null,2) + '</pre>');
+				  	})
+		          } else {
+		          	output("Sorry, that URL is not one of my API endpoints. Use the 'help' command for a list of URLs.");
+		          }
+		          break;
+		        default:
+		          if (cmd) {
+		            output(cmd + ': command not found');
+		          }
+		      };
+
+		      window.scrollTo(0, getDocHeight_());
+		      this.value = ''; // Clear/setup line for next input.
+		    }
+		  }
+
+		  //
+		  function output(html) {
+		    output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
+		  }
+
+		  // Cross-browser impl to get document's height.
+		  function getDocHeight_() {
+		    var d = document;
+		    return Math.max(
+		        Math.max(d.body.scrollHeight, d.documentElement.scrollHeight),
+		        Math.max(d.body.offsetHeight, d.documentElement.offsetHeight),
+		        Math.max(d.body.clientHeight, d.documentElement.clientHeight)
+		    );
+		  }
+
+		  //
+		  return {
+		    init: function() {
+		      output(new Date() + '</p><p>Enter "help" for more information.</p>');
+		    },
+		    output: output
+		  }
+		};
+    </script>
+  </head>
+  <body>
+    <div id="container">
+      <output></output>
+      <div id="input-line" class="input-line">
+        <div class="prompt"></div><div><input class="cmdline" autofocus /></div>
+      </div>
+    </div>
+  </body>
+</html>
